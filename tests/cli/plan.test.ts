@@ -1,15 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { createExperiment, slugify } from '../../src/lib/protocols';
+import { createExperiment, slugify, setExperimentsDir } from '../../src/lib/protocols';
 import { getDatabase, setDatabasePath, closeDatabase } from '../../src/db/connection';
 
 describe('alchemy plan command logic', () => {
     const TEST_DB_PATH = path.resolve(__dirname, 'test-alchemist.db');
-    const TEST_EXP_DIR = path.resolve(process.cwd(), 'experiments');
+    const TEST_EXP_DIR = path.resolve(__dirname, 'test-experiments-plan');
 
     beforeEach(async () => {
         setDatabasePath(TEST_DB_PATH);
+        setExperimentsDir(TEST_EXP_DIR);
         if (fs.existsSync(TEST_DB_PATH)) {
             fs.unlinkSync(TEST_DB_PATH);
         }

@@ -1,16 +1,17 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { createExperiment } from '../../src/lib/protocols';
+import { createExperiment, setExperimentsDir } from '../../src/lib/protocols';
 import { generateBriefing } from '../../src/lib/consultant';
 import { setDatabasePath, closeDatabase } from '../../src/db/connection';
 
 describe('alchemy consult command logic', () => {
     const TEST_DB_PATH = path.resolve(__dirname, 'test-consult.db');
-    const TEST_EXP_DIR = path.resolve(process.cwd(), 'experiments');
+    const TEST_EXP_DIR = path.resolve(__dirname, 'test-experiments-consult');
 
     beforeEach(async () => {
         setDatabasePath(TEST_DB_PATH);
+        setExperimentsDir(TEST_EXP_DIR);
         if (fs.existsSync(TEST_DB_PATH)) {
             fs.unlinkSync(TEST_DB_PATH);
         }
@@ -53,7 +54,7 @@ describe('alchemy consult command logic', () => {
         const experiment = await createExperiment(title, hypothesis);
 
         // Manually modify protocol.md to include a Procedure section
-        const experimentsDir = path.resolve(process.cwd(), 'experiments');
+        const experimentsDir = TEST_EXP_DIR;
         const directories = fs.readdirSync(experimentsDir);
         const experimentDirName = directories.find(dir => dir.startsWith(experiment.id))!;
         const protocolPath = path.join(experimentsDir, experimentDirName, 'protocol.md');

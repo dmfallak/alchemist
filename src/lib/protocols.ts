@@ -46,11 +46,21 @@ export async function generateExperimentId(): Promise<string> {
     });
 }
 
+let experimentsBaseDir = path.resolve(process.cwd(), 'experiments');
+
+export function setExperimentsDir(dir: string) {
+    experimentsBaseDir = dir;
+}
+
+export function getExperimentsDir(): string {
+    return experimentsBaseDir;
+}
+
 export async function createExperiment(title: string, hypothesis: string): Promise<Experiment> {
     const id = await generateExperimentId();
     const slug = slugify(title);
     const dirName = `${id}-${slug}`;
-    const experimentsDir = path.resolve(process.cwd(), 'experiments');
+    const experimentsDir = getExperimentsDir();
     const experimentDir = path.join(experimentsDir, dirName);
 
     if (!fs.existsSync(experimentsDir)) {
@@ -95,7 +105,7 @@ export async function createExperiment(title: string, hypothesis: string): Promi
 }
 
 export async function getExperimentContext(id: string): Promise<{ metadata: any, content: string } | null> {
-    const experimentsDir = path.resolve(process.cwd(), 'experiments');
+    const experimentsDir = getExperimentsDir();
     if (!fs.existsSync(experimentsDir)) {
         return null;
     }
