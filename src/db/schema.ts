@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS experiments (
     title TEXT NOT NULL,
     hypothesis TEXT,
     status TEXT DEFAULT 'active',
+    linked_node TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 `;
@@ -28,5 +29,17 @@ CREATE TABLE IF NOT EXISTS tasks (
     status TEXT DEFAULT 'backlog',
     linked_exp TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+`;
+
+export const CREATE_REASONING_TABLE = `
+CREATE TABLE IF NOT EXISTS reasoning (
+    id TEXT PRIMARY KEY,
+    hypothesis TEXT NOT NULL,
+    evidence_score REAL DEFAULT 0.0,
+    branch_a TEXT,
+    branch_b TEXT,
+    certainty REAL DEFAULT 0.0,
+    parent_id TEXT
 );
 `;

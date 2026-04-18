@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
+import * as fs from 'fs';
 import { createExperiment, slugify } from '../lib/protocols';
 import { generateBriefing } from '../lib/consultant';
 import { getPendingTasks, completeTask, getInsights, createTask } from '../lib/tasks';
+import { generateStrategyMap, linkExperimentToNode, createReasoningNode } from '../lib/strategy';
 import { closeDatabase } from '../db/connection';
 
 const program = new Command();
@@ -121,6 +123,59 @@ program
             });
         } catch (error: any) {
             console.error(`Error listing insights: ${error.message}`);
+            process.exit(1);
+        } finally {
+            await closeDatabase();
+        }
+    });
+
+program
+    .command('map')
+    .description('Write the Mermaid map to STRATEGY.md')
+    .action(async () => {
+        try {
+            const map = await generateStrategyMap();
+            fs.writeFileSync('STRATEGY.md', `# Strategy Map\n\n\`\`\`mermaid\n${map}\n\`\`\`\n`);
+            console.log('Successfully updated STRATEGY.md');
+        } catch (error: any) {
+            console.error(`Error generating map: ${error.message}`);
+            process.exit(1);
+        } finally {
+            await closeDatabase();
+        }
+    });
+
+program
+    .command('link')
+    .description('Link an experiment to a reasoning node')
+    .argument('<expId>', 'The ID of the experiment')
+    .argument('<nodeId>', 'The ID of the reasoning node')
+    .action(async (expId, nodeId) => {
+        try {
+            await linkExperimentToNode(expId, nodeId);
+            console.log(`Successfully linked experiment ${expId} to node ${nodeId}`);
+        } catch (error: any) {
+            console.error(`Error linking experiment: ${error.message}`);
+            process.exit(1);
+        } finally {
+            await closeDatabase();
+        }
+    });
+
+program
+    .command('formalize')
+    .description('Parse a brainstorm file into a node (Placeholder)')
+    .argument('<brainstorm_path>', 'The path to the brainstorm file')
+    .action(async (brainstormPath) => {
+        try {
+            console.log(`Formalizing brainstorm from ${brainstormPath}...`);
+            // Placeholder: For now, just create a dummy node based on the filename
+            const id = `LOG-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+            const hypothesis = `Hypothesis from ${brainstormPath}`;
+            await createReasoningNode(id, hypothesis);
+            console.log(`Successfully formalized node: ${id}`);
+        } catch (error: any) {
+            console.error(`Error formalizing brainstorm: ${error.message}`);
             process.exit(1);
         } finally {
             await closeDatabase();
