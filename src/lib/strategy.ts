@@ -45,15 +45,29 @@ export async function generateStrategyMap(): Promise<string> {
             let map = 'graph TD;\n';
             rows.forEach((node: any) => {
                 map += `    ${node.id}["${node.hypothesis}"];\n`;
+                
                 if (node.branch_a) {
                     const branchAId = `${node.id}_A`;
                     map += `    ${branchAId}["${node.branch_a}"];\n`;
                     map += `    ${node.id} --> ${branchAId};\n`;
+                    
+                    // Check if any node has this as its parent and belongs to this branch
+                    const child = rows.find(r => r.parent_id === node.id && node.branch_a.includes(r.id));
+                    if (child) {
+                        map += `    ${branchAId} --> ${child.id};\n`;
+                    }
                 }
+                
                 if (node.branch_b) {
                     const branchBId = `${node.id}_B`;
                     map += `    ${branchBId}["${node.branch_b}"];\n`;
                     map += `    ${node.id} --> ${branchBId};\n`;
+                    
+                    // Check if any node has this as its parent and belongs to this branch
+                    const child = rows.find(r => r.parent_id === node.id && node.branch_b.includes(r.id));
+                    if (child) {
+                        map += `    ${branchBId} --> ${child.id};\n`;
+                    }
                 }
             });
             resolve(map);
