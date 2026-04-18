@@ -43,13 +43,17 @@ export async function generateStrategyMap(): Promise<string> {
             }
 
             let map = 'graph TD;\n';
-            rows.forEach((node: ReasoningNode) => {
+            rows.forEach((node: any) => {
                 map += `    ${node.id}["${node.hypothesis}"];\n`;
                 if (node.branch_a) {
-                    map += `    ${node.id} --> ${node.branch_a};\n`;
+                    const branchAId = `${node.id}_A`;
+                    map += `    ${branchAId}["${node.branch_a}"];\n`;
+                    map += `    ${node.id} --> ${branchAId};\n`;
                 }
                 if (node.branch_b) {
-                    map += `    ${node.id} --> ${node.branch_b};\n`;
+                    const branchBId = `${node.id}_B`;
+                    map += `    ${branchBId}["${node.branch_b}"];\n`;
+                    map += `    ${node.id} --> ${branchBId};\n`;
                 }
             });
             resolve(map);
