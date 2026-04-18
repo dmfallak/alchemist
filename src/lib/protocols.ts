@@ -104,6 +104,19 @@ export async function createExperiment(title: string, hypothesis: string): Promi
     });
 }
 
+export async function getActiveExperiments(): Promise<Experiment[]> {
+    const db = await getDatabase();
+    return new Promise((resolve, reject) => {
+        db.all('SELECT * FROM experiments WHERE status = "active" ORDER BY created_at DESC', (err, rows: any[]) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+            resolve(rows || []);
+        });
+    });
+}
+
 export async function getExperimentContext(id: string): Promise<{ metadata: any, content: string } | null> {
     const experimentsDir = getExperimentsDir();
     if (!fs.existsSync(experimentsDir)) {

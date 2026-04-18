@@ -5,6 +5,8 @@ import { createExperiment, slugify } from '../lib/protocols';
 import { generateBriefing } from '../lib/consultant';
 import { getPendingTasks, completeTask, getInsights, createTask } from '../lib/tasks';
 import { generateStrategyMap, linkExperimentToNode, createReasoningNode } from '../lib/strategy';
+import { updateBridge } from '../lib/bridge';
+import { generateJournal } from '../lib/journal';
 import { closeDatabase } from '../db/connection';
 
 const program = new Command();
@@ -23,6 +25,7 @@ program
         try {
             const experiment = await createExperiment(title, options.hypothesis);
             const slug = slugify(title);
+            await updateBridge();
             console.log(`Successfully planned experiment: ${experiment.id}`);
             console.log(`Directory: experiments/${experiment.id}-${slug}`);
         } catch (error: any) {
@@ -98,9 +101,25 @@ program
     .action(async (id) => {
         try {
             await completeTask(id);
+            await updateBridge();
             console.log(`Task ${id} marked as complete.`);
         } catch (error: any) {
             console.error(`Error completing task: ${error.message}`);
+            process.exit(1);
+        } finally {
+            await closeDatabase();
+        }
+    });
+
+program
+    .command('publish')
+    .description('Generate the HTML journal')
+    .action(async () => {
+        try {
+            await generateJournal();
+            console.log('Successfully published Lab Journal to site/index.html');
+        } catch (error: any) {
+            console.error(`Error publishing journal: ${error.message}`);
             process.exit(1);
         } finally {
             await closeDatabase();
