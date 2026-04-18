@@ -2,6 +2,7 @@
 import { Command } from 'commander';
 import { createExperiment, slugify } from '../lib/protocols';
 import { generateBriefing } from '../lib/consultant';
+import { getPendingTasks, completeTask, getInsights, createTask } from '../lib/tasks';
 import { closeDatabase } from '../db/connection';
 
 const program = new Command();
@@ -40,6 +41,86 @@ program
             console.log(briefing);
         } catch (error: any) {
             console.error(`Error generating briefing: ${error.message}`);
+            process.exit(1);
+        } finally {
+            await closeDatabase();
+        }
+    });
+
+program
+    .command('task')
+    .description('Create a new task')
+    .argument('<title>', 'The title of the task')
+    .option('--priority <level>', 'The priority of the task', 'medium')
+    .option('--linked-exp <id>', 'The ID of the linked experiment')
+    .action(async (title, options) => {
+        try {
+            const task = await createTask(title, options.priority, options.linkedExp);
+            console.log(`Successfully created task: ${task.id}`);
+            console.log(`File: tasks/${task.id}.md`);
+        } catch (error: any) {
+            console.error(`Error creating task: ${error.message}`);
+            process.exit(1);
+        } finally {
+            await closeDatabase();
+        }
+    });
+
+program
+    .command('next')
+    .description('List pending tasks')
+    .action(async () => {
+        try {
+            const tasks = await getPendingTasks();
+            if (tasks.length === 0) {
+                console.log('No pending tasks.');
+                return;
+            }
+            console.log('Pending Tasks:');
+            tasks.forEach(task => {
+                const linked = task.linked_exp ? ` [Exp: ${task.linked_exp}]` : '';
+                console.log(`- ${task.id}: ${task.title} (${task.priority})${linked}`);
+            });
+        } catch (error: any) {
+            console.error(`Error listing tasks: ${error.message}`);
+            process.exit(1);
+        } finally {
+            await closeDatabase();
+        }
+    });
+
+program
+    .command('complete')
+    .description('Complete a task')
+    .argument('<id>', 'The ID of the task')
+    .action(async (id) => {
+        try {
+            await completeTask(id);
+            console.log(`Task ${id} marked as complete.`);
+        } catch (error: any) {
+            console.error(`Error completing task: ${error.message}`);
+            process.exit(1);
+        } finally {
+            await closeDatabase();
+        }
+    });
+
+program
+    .command('news')
+    .description('List recent insights')
+    .action(async () => {
+        try {
+            const insights = await getInsights();
+            if (insights.length === 0) {
+                console.log('No recent insights.');
+                return;
+            }
+            console.log('Recent Insights:');
+            insights.forEach(file => {
+                console.log(`- ${file}`);
+            });
+        } catch (error: any) {
+            console.error(`Error listing insights: ${error.message}`);
             process.exit(1);
         } finally {
             await closeDatabase();

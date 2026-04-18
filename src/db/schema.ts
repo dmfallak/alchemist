@@ -19,3 +19,14 @@ CREATE TABLE IF NOT EXISTS measurements (
     FOREIGN KEY (experiment_id) REFERENCES experiments(id)
 );
 `;
+
+export const CREATE_TASKS_TABLE = `
+CREATE TABLE IF NOT EXISTS tasks (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    priority TEXT NOT NULL,
+    status TEXT DEFAULT 'backlog',
+    linked_exp TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+`;
