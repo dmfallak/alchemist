@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { stringify } from 'yaml';
+import { parse, stringify } from 'yaml';
 import { getDatabase } from '../db/connection';
 
 export interface Experiment {
@@ -92,4 +92,34 @@ export async function createExperiment(title: string, hypothesis: string): Promi
             }
         );
     });
+}
+
+export async function getExperimentContext(id: string): Promise<{ metadata: any, content: string } | null> {
+    const experimentsDir = path.resolve(process.cwd(), 'experiments');
+    if (!fs.existsSync(experimentsDir)) {
+        return null;
+    }
+    const directories = fs.readdirSync(experimentsDir);
+    const experimentDirName = directories.find(dir => dir.startsWith(id));
+    if (!experimentDirName) {
+        return null;
+    }
+    const protocolPath = path.join(experimentsDir, experimentDirName, 'protocol.md');
+    if (!fs.existsSync(protocolPath)) {
+        return null;
+    }
+    const fileContent = fs.readFileSync(protocolPath, 'utf-8');
+    const match = fileContent.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+    if (!match) {
+        return { metadata: {}, content: fileContent };
+    }
+    const yamlContent = match[1];
+    const markdownContent = match[2];
+    try {
+        const metadata = parse(yamlContent);
+        return { metadata, content: markdownContent };
+    } catch (e) {
+        console.error('Error parsing YAML frontmatter:', e);
+        return { metadata: {}, content: markdownContent };
+    }
 }
