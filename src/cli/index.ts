@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 import { createExperiment, slugify } from '../lib/protocols';
+import { generateBriefing } from '../lib/consultant';
 import { closeDatabase } from '../db/connection';
 
 const program = new Command();
@@ -23,6 +24,22 @@ program
             console.log(`Directory: experiments/${experiment.id}-${slug}`);
         } catch (error: any) {
             console.error(`Error planning experiment: ${error.message}`);
+            process.exit(1);
+        } finally {
+            await closeDatabase();
+        }
+    });
+
+program
+    .command('consult')
+    .description('Provide a deep scientific briefing for an experiment')
+    .argument('<id>', 'The ID of the experiment')
+    .action(async (id) => {
+        try {
+            const briefing = await generateBriefing(id);
+            console.log(briefing);
+        } catch (error: any) {
+            console.error(`Error generating briefing: ${error.message}`);
             process.exit(1);
         } finally {
             await closeDatabase();
