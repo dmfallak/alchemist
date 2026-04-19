@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { parseFrontmatter, stringifyFrontmatter } from './frontmatter';
-import { getExperiment, getExperimentsDir } from './experiments';
+import { getExperiment } from './experiments';
 
 export interface ReasoningNodeInit {
     id: string;
@@ -131,6 +131,3 @@ export async function linkExperimentToNode(expId: string, nodeId: string): Promi
     metadata.linked_node = nodeId;
     fs.writeFileSync(protocolPath, stringifyFrontmatter(metadata, body));
 }
-
-// Re-exported for use by migration scripts (Task 8)
-export { getExperimentsDir };
