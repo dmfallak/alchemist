@@ -28,17 +28,19 @@ describe('Strategy Engine', () => {
     });
 
     it('should generate a strategy map in Mermaid format', async () => {
-        await createReasoningNode('LOG-001', 'Root Hypothesis', undefined, 'LOG-002', 'LOG-003');
-        await createReasoningNode('LOG-002', 'Branch A');
-        await createReasoningNode('LOG-003', 'Branch B');
+        await createReasoningNode('LOG-001', 'Root Hypothesis', undefined, 'Branch A leads to LOG-002', 'Branch B leads to LOG-003');
+        await createReasoningNode('LOG-002', 'Branch A Follow-up', 'LOG-001');
+        await createReasoningNode('LOG-003', 'Branch B Follow-up', 'LOG-001');
 
         const map = await generateStrategyMap();
         expect(map).toContain('graph TD;');
         expect(map).toContain('LOG-001["Root Hypothesis"];');
-        expect(map).toContain('LOG-001 --> LOG-002;');
-        expect(map).toContain('LOG-001 --> LOG-003;');
-        expect(map).toContain('LOG-002["Branch A"];');
-        expect(map).toContain('LOG-003["Branch B"];');
+        expect(map).toContain('LOG-001_A["Branch A leads to LOG-002"];');
+        expect(map).toContain('LOG-001 --> LOG-001_A;');
+        expect(map).toContain('LOG-001_A --> LOG-002;');
+        expect(map).toContain('LOG-001_B["Branch B leads to LOG-003"];');
+        expect(map).toContain('LOG-001 --> LOG-001_B;');
+        expect(map).toContain('LOG-001_B --> LOG-003;');
     });
 
     it('should link an experiment to a node', async () => {
