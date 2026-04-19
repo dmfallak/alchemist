@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { parse, stringify } from 'yaml';
-import { getDatabase } from '../db/connection';
+import { parseFrontmatter, stringifyFrontmatter } from './frontmatter';
+import { nextId } from './ids';
 
 export interface Task {
     id: string;
@@ -9,30 +9,12 @@ export interface Task {
     priority: string;
     status: string;
     linked_exp?: string;
-    created_at?: string;
 }
 
-export async function generateTaskId(): Promise<string> {
-    const db = await getDatabase();
-    return new Promise((resolve, reject) => {
-        db.get('SELECT id FROM tasks ORDER BY id DESC LIMIT 1', (err, row: any) => {
-            if (err) {
-                reject(err);
-                return;
-            }
-            if (!row) {
-                resolve('TSK-001');
-                return;
-            }
-            const match = row.id.match(/TSK-(\d+)/);
-            if (match) {
-                const nextId = parseInt(match[1]) + 1;
-                resolve(`TSK-${nextId.toString().padStart(3, '0')}`);
-            } else {
-                resolve('TSK-001');
-            }
-        });
-    });
+export interface TaskFile {
+    metadata: Record<string, any>;
+    body: string;
+    path: string;
 }
 
 let tasksBaseDir = path.resolve(process.cwd(), 'tasks');
@@ -45,99 +27,64 @@ export function getTasksDir(): string {
     return tasksBaseDir;
 }
 
-export async function createTask(title: string, priority: string, linked_exp?: string): Promise<Task> {
-    const id = await generateTaskId();
-    const tasksDir = getTasksDir();
+function taskPath(id: string): string {
+    return path.join(getTasksDir(), `${id}.md`);
+}
 
-    if (!fs.existsSync(tasksDir)) {
-        fs.mkdirSync(tasksDir, { recursive: true });
-    }
-
-    const task: Task = {
+export async function createTask(
+    title: string,
+    priority: string,
+    linked_exp?: string,
+): Promise<Task> {
+    const base = getTasksDir();
+    if (!fs.existsSync(base)) fs.mkdirSync(base, { recursive: true });
+    const id = nextId(base, 'TSK-');
+    const metadata: Record<string, any> = {
         id,
         title,
         priority,
         status: 'backlog',
-        linked_exp: linked_exp || undefined,
     };
-
-    const frontmatter = `---\n${stringify(task)}---\n`;
-    const content = `${frontmatter}# Task: ${title}\n\n...`;
-
-    fs.writeFileSync(path.join(tasksDir, `${id}.md`), content);
-
-    const db = await getDatabase();
-    return new Promise((resolve, reject) => {
-        db.run(
-            'INSERT INTO tasks (id, title, priority, status, linked_exp) VALUES (?, ?, ?, ?, ?)',
-            [id, title, priority, 'backlog', linked_exp || null],
-            (err) => {
-                if (err) {
-                    reject(err);
-                    return;
-                }
-                resolve(task);
-            }
-        );
-    });
+    if (linked_exp) metadata.linked_exp = linked_exp;
+    const body = `# Task: ${title}\n\n...\n`;
+    fs.writeFileSync(taskPath(id), stringifyFrontmatter(metadata, body));
+    return { id, title, priority, status: 'backlog', linked_exp };
 }
 
-export async function getPendingTasks(): Promise<Task[]> {
-    const db = await getDatabase();
-    return new Promise((resolve, reject) => {
-        db.all('SELECT * FROM tasks WHERE status != "done" ORDER BY created_at DESC', (err, rows: any[]) => {
-            if (err) {
-                reject(err);
-                return;
-            }
-            resolve(rows || []);
+export interface ListOptions {
+    all?: boolean;
+}
+
+export async function listTasks(options: ListOptions = {}): Promise<Task[]> {
+    const base = getTasksDir();
+    if (!fs.existsSync(base)) return [];
+    const files = fs.readdirSync(base).filter(f => /^TSK-\d+\.md$/.test(f)).sort();
+    const tasks: Task[] = [];
+    for (const f of files) {
+        const { metadata } = parseFrontmatter(fs.readFileSync(path.join(base, f), 'utf-8'));
+        if (!options.all && metadata.status === 'done') continue;
+        tasks.push({
+            id: metadata.id,
+            title: metadata.title,
+            priority: metadata.priority,
+            status: metadata.status,
+            linked_exp: metadata.linked_exp,
         });
-    });
+    }
+    return tasks;
+}
+
+export async function getTask(id: string): Promise<TaskFile | null> {
+    const file = taskPath(id);
+    if (!fs.existsSync(file)) return null;
+    const { metadata, body } = parseFrontmatter(fs.readFileSync(file, 'utf-8'));
+    return { metadata, body, path: file };
 }
 
 export async function completeTask(id: string): Promise<void> {
-    const db = await getDatabase();
-    
-    // Update DB
-    await new Promise<void>((resolve, reject) => {
-        db.run('UPDATE tasks SET status = "done" WHERE id = ?', [id], function(err) {
-            if (err) {
-                reject(err);
-                return;
-            }
-            if (this.changes === 0) {
-                reject(new Error(`Task ${id} not found`));
-                return;
-            }
-            resolve();
-        });
-    });
-
-    // Update YAML in file
-    const tasksDir = getTasksDir();
-    const filePath = path.join(tasksDir, `${id}.md`);
-    if (fs.existsSync(filePath)) {
-        const fileContent = fs.readFileSync(filePath, 'utf-8');
-        const match = fileContent.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
-        if (match) {
-            const yamlContent = match[1];
-            const markdownContent = match[2];
-            try {
-                const metadata = parse(yamlContent);
-                metadata.status = 'done';
-                const newFrontmatter = `---\n${stringify(metadata)}---\n`;
-                fs.writeFileSync(filePath, `${newFrontmatter}${markdownContent}`);
-            } catch (e) {
-                console.error('Error parsing YAML frontmatter:', e);
-            }
-        }
-    }
-}
-
-export async function getInsights(): Promise<string[]> {
-    const insightsDir = path.resolve(process.cwd(), 'insights');
-    if (!fs.existsSync(insightsDir)) {
-        return [];
-    }
-    return fs.readdirSync(insightsDir).filter(file => file.endsWith('.md'));
+    const file = taskPath(id);
+    if (!fs.existsSync(file)) throw new Error(`Task ${id} not found`);
+    const { metadata, body } = parseFrontmatter(fs.readFileSync(file, 'utf-8'));
+    metadata.status = 'done';
+    fs.writeFileSync(file, stringifyFrontmatter(metadata, body));
 }
