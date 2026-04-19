@@ -1,12 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { getActiveExperiments } from './protocols';
-import { getPendingTasks } from './tasks';
-import { generateStrategyMap } from './strategy';
+import { listExperiments } from './experiments';
+import { listTasks } from './tasks';
+import { generateStrategyMap } from './reasoning';
 
 export async function generateJournal(): Promise<string> {
-    const activeExperiments = await getActiveExperiments();
-    const pendingTasks = await getPendingTasks();
+    const experiments = (await listExperiments()).filter(e => e.status === 'active');
+    const tasks = await listTasks();
     const strategyMap = await generateStrategyMap();
 
     const html = `<!DOCTYPE html>
@@ -35,14 +35,10 @@ export async function generateJournal(): Promise<string> {
     <h2>Active Experiments</h2>
     <table>
         <thead>
-            <tr>
-                <th>ID</th>
-                <th>Title</th>
-                <th>Hypothesis</th>
-            </tr>
+            <tr><th>ID</th><th>Title</th><th>Hypothesis</th></tr>
         </thead>
         <tbody>
-            ${activeExperiments.map(exp => `
+            ${experiments.map(exp => `
                 <tr>
                     <td>${exp.id}</td>
                     <td>${exp.title}</td>
@@ -55,14 +51,10 @@ export async function generateJournal(): Promise<string> {
     <h2>Pending Tasks</h2>
     <table>
         <thead>
-            <tr>
-                <th>ID</th>
-                <th>Title</th>
-                <th>Priority</th>
-            </tr>
+            <tr><th>ID</th><th>Title</th><th>Priority</th></tr>
         </thead>
         <tbody>
-            ${pendingTasks.map(task => `
+            ${tasks.map(task => `
                 <tr>
                     <td>${task.id}</td>
                     <td>${task.title}</td>
@@ -79,10 +71,7 @@ export async function generateJournal(): Promise<string> {
 </html>`;
 
     const siteDir = path.resolve(process.cwd(), 'site');
-    if (!fs.existsSync(siteDir)) {
-        fs.mkdirSync(siteDir, { recursive: true });
-    }
-
+    if (!fs.existsSync(siteDir)) fs.mkdirSync(siteDir, { recursive: true });
     fs.writeFileSync(path.join(siteDir, 'index.html'), html);
     return html;
 }
