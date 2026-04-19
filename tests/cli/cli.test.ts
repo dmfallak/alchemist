@@ -42,6 +42,18 @@ describe('alchemy CLI', () => {
         expect(data.map((t: any) => t.id)).toEqual(['TSK-002']);
     });
 
+    it('complete --result records the result and promotes it to the linked experiment', () => {
+        runCli(['plan', 'Calibrate fridge', '--hypothesis', 'h'], tmpDir);
+        runCli(['task', 'Ask user for fridge temp', '--linked-exp', 'EXP-001'], tmpDir);
+        runCli(['complete', 'TSK-001', '--result', '38 degF'], tmpDir);
+        const taskShow = runCli(['--json', 'show', 'TSK-001'], tmpDir);
+        const taskData = JSON.parse(taskShow.stdout);
+        expect(taskData.metadata.status).toBe('done');
+        expect(taskData.metadata.result).toBe('38 degF');
+        const expShow = runCli(['show', 'EXP-001'], tmpDir);
+        expect(expShow.stdout).toContain('[from TSK-001] 38 degF');
+    });
+
     it('show <id> routes by prefix and emits JSON', () => {
         runCli(['plan', 'Show me', '--hypothesis', 'h'], tmpDir);
         const show = runCli(['--json', 'show', 'EXP-001'], tmpDir);

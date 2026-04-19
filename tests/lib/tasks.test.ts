@@ -3,17 +3,22 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { createTask, listTasks, getTask, completeTask, setTasksDir } from '../../src/lib/tasks';
+import { createExperiment, getExperiment, setExperimentsDir } from '../../src/lib/experiments';
 
 describe('tasks', () => {
     let tmpDir: string;
+    let expDir: string;
 
     beforeEach(() => {
         tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alchemist-tasks-'));
+        expDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alchemist-tasks-exp-'));
         setTasksDir(tmpDir);
+        setExperimentsDir(expDir);
     });
 
     afterEach(() => {
         fs.rmSync(tmpDir, { recursive: true, force: true });
+        fs.rmSync(expDir, { recursive: true, force: true });
     });
 
     it('creates a task with markdown file and frontmatter', async () => {
@@ -69,5 +74,32 @@ describe('tasks', () => {
 
     it('completeTask throws when the task is missing', async () => {
         await expect(completeTask('TSK-404')).rejects.toThrow('Task TSK-404 not found');
+    });
+
+    it('completeTask records a result in the task frontmatter', async () => {
+        await createTask('Ask user for fridge temp', 'low');
+        await completeTask('TSK-001', '38 degF');
+        const t = await getTask('TSK-001');
+        expect(t!.metadata.status).toBe('done');
+        expect(t!.metadata.result).toBe('38 degF');
+    });
+
+    it('completeTask with a result promotes it to an observation on the linked experiment', async () => {
+        const exp = await createExperiment('Fridge calibration', 'H');
+        await createTask('Ask user for fridge temp', 'low', exp.id);
+        await completeTask('TSK-001', '38 degF');
+        const e = await getExperiment(exp.id);
+        expect(e!.body).toContain('## Observations');
+        expect(e!.body).toContain('[from TSK-001] 38 degF');
+    });
+
+    it('completeTask without a result does not promote or record', async () => {
+        const exp = await createExperiment('Fridge calibration', 'H');
+        await createTask('Ask user for fridge temp', 'low', exp.id);
+        await completeTask('TSK-001');
+        const t = await getTask('TSK-001');
+        expect(t!.metadata.result).toBeUndefined();
+        const e = await getExperiment(exp.id);
+        expect(e!.body).not.toContain('## Observations');
     });
 });

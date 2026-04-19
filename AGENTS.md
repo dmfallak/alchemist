@@ -49,7 +49,7 @@ All commands accept a global `--json` flag (placed **before** the subcommand, e.
 **Update:**
 - `alchemy measure <expId> <key>=<value> [unit]` — append datapoint
 - `alchemy note <expId> <text>` — append observation
-- `alchemy complete <id>` — mark task done
+- `alchemy complete <id> [--result <text>]` — mark task done; `--result` records the finding on the task and, if the task is linked to an experiment, appends it as an observation there
 - `alchemy conclude <expId> <outcome>` — close experiment
 - `alchemy link <expId> <nodeId>` — link experiment to reasoning node
 

@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { parseFrontmatter, stringifyFrontmatter } from './frontmatter';
 import { nextId } from './ids';
+import { appendObservation } from './experiments';
 
 export interface Task {
     id: string;
@@ -81,10 +82,17 @@ export async function getTask(id: string): Promise<TaskFile | null> {
     return { metadata, body, path: file };
 }
 
-export async function completeTask(id: string): Promise<void> {
+export async function completeTask(id: string, result?: string): Promise<void> {
     const file = taskPath(id);
     if (!fs.existsSync(file)) throw new Error(`Task ${id} not found`);
     const { metadata, body } = parseFrontmatter(fs.readFileSync(file, 'utf-8'));
     metadata.status = 'done';
+    if (result !== undefined) {
+        metadata.result = result;
+    }
     fs.writeFileSync(file, stringifyFrontmatter(metadata, body));
+
+    if (result !== undefined && metadata.linked_exp) {
+        await appendObservation(metadata.linked_exp, `[from ${id}] ${result}`);
+    }
 }

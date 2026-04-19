@@ -195,9 +195,12 @@ program
     .command('complete')
     .description('Mark a task complete')
     .argument('<id>')
-    .action(async (id) => {
-        await completeTask(id);
-        out(`Completed ${id}`, { id, status: 'done' });
+    .option('--result <text>', 'Result to record on the task (auto-promoted to an observation on the linked experiment, if any)')
+    .action(async (id, options) => {
+        await completeTask(id, options.result);
+        const payload: Record<string, unknown> = { id, status: 'done' };
+        if (options.result !== undefined) payload.result = options.result;
+        out(`Completed ${id}`, payload);
     });
 
 program
