@@ -11,3 +11,6 @@ safety: []
 # Protocol: Pilot-Wave Silicon Droplet
 
 ...
+
+## Observations
+- Experiment placed on indefinite hold. Strategic pivot to EXP-002 (Maturity Lab Path) to ensure species stability before pursuing vacuum energy/FTL technology.
