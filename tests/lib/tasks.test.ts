@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { createTask, listTasks, getTask, completeTask, setTasksDir } from '../../src/lib/tasks';
+import { createTask, listTasks, getTask, completeTask, editTask, setTasksDir } from '../../src/lib/tasks';
 import { createExperiment, getExperiment, setExperimentsDir } from '../../src/lib/experiments';
 
 describe('tasks', () => {
@@ -91,6 +91,26 @@ describe('tasks', () => {
         const e = await getExperiment(exp.id);
         expect(e!.body).toContain('## Observations');
         expect(e!.body).toContain('[from TSK-001] 38 degF');
+    });
+
+    it('editTask updates title in frontmatter', async () => {
+        await createTask('Old Title', 'low');
+        await editTask('TSK-001', { title: 'New Title' });
+        const t = await getTask('TSK-001');
+        expect(t!.metadata.title).toBe('New Title');
+        expect(t!.metadata.priority).toBe('low');
+    });
+
+    it('editTask updates priority in frontmatter', async () => {
+        await createTask('My Task', 'low');
+        await editTask('TSK-001', { priority: 'high' });
+        const t = await getTask('TSK-001');
+        expect(t!.metadata.priority).toBe('high');
+        expect(t!.metadata.title).toBe('My Task');
+    });
+
+    it('editTask throws when task not found', async () => {
+        await expect(editTask('TSK-999', { title: 'X' })).rejects.toThrow('Task TSK-999 not found');
     });
 
     it('completeTask without a result does not promote or record', async () => {

@@ -142,6 +142,19 @@ export async function appendObservation(id: string, text: string): Promise<void>
     fs.writeFileSync(file, stringifyFrontmatter(metadata, newBody));
 }
 
+export async function editExperiment(
+    id: string,
+    fields: { title?: string; hypothesis?: string },
+): Promise<void> {
+    const dir = findExperimentDir(id);
+    if (!dir) throw new Error(`Experiment ${id} not found`);
+    const file = path.join(dir, 'protocol.md');
+    const { metadata, body } = parseFrontmatter(fs.readFileSync(file, 'utf-8'));
+    if (fields.title !== undefined) metadata.title = fields.title;
+    if (fields.hypothesis !== undefined) metadata.hypothesis = fields.hypothesis;
+    fs.writeFileSync(file, stringifyFrontmatter(metadata, body));
+}
+
 export async function concludeExperiment(id: string, outcome: string): Promise<void> {
     const dir = findExperimentDir(id);
     if (!dir) throw new Error(`Experiment ${id} not found`);

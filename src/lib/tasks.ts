@@ -82,6 +82,18 @@ export async function getTask(id: string): Promise<TaskFile | null> {
     return { metadata, body, path: file };
 }
 
+export async function editTask(
+    id: string,
+    fields: { title?: string; priority?: string },
+): Promise<void> {
+    const file = taskPath(id);
+    if (!fs.existsSync(file)) throw new Error(`Task ${id} not found`);
+    const { metadata, body } = parseFrontmatter(fs.readFileSync(file, 'utf-8'));
+    if (fields.title !== undefined) metadata.title = fields.title;
+    if (fields.priority !== undefined) metadata.priority = fields.priority;
+    fs.writeFileSync(file, stringifyFrontmatter(metadata, body));
+}
+
 export async function completeTask(id: string, result?: string): Promise<void> {
     const file = taskPath(id);
     if (!fs.existsSync(file)) throw new Error(`Task ${id} not found`);

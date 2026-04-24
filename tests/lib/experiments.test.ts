@@ -10,6 +10,7 @@ import {
     readMeasurements,
     appendObservation,
     concludeExperiment,
+    editExperiment,
     setExperimentsDir,
     slugify,
 } from '../../src/lib/experiments';
@@ -95,5 +96,25 @@ describe('experiments', () => {
         expect(exp!.metadata.status).toBe('concluded');
         expect(exp!.body).toContain('## Outcome');
         expect(exp!.body).toContain('Hypothesis refuted: no interference observed.');
+    });
+
+    it('editExperiment updates title in frontmatter', async () => {
+        await createExperiment('Old Title', 'Old Hypothesis');
+        await editExperiment('EXP-001', { title: 'New Title' });
+        const exp = await getExperiment('EXP-001');
+        expect(exp!.metadata.title).toBe('New Title');
+        expect(exp!.metadata.hypothesis).toBe('Old Hypothesis');
+    });
+
+    it('editExperiment updates hypothesis in frontmatter', async () => {
+        await createExperiment('Title', 'Old Hypothesis');
+        await editExperiment('EXP-001', { hypothesis: 'New Hypothesis' });
+        const exp = await getExperiment('EXP-001');
+        expect(exp!.metadata.hypothesis).toBe('New Hypothesis');
+        expect(exp!.metadata.title).toBe('Title');
+    });
+
+    it('editExperiment throws when experiment not found', async () => {
+        await expect(editExperiment('EXP-999', { title: 'X' })).rejects.toThrow('Experiment EXP-999 not found');
     });
 });

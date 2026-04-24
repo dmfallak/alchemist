@@ -9,6 +9,7 @@ import {
     appendMeasurement,
     appendObservation,
     concludeExperiment,
+    editExperiment,
     setExperimentsDir,
 } from '../lib/experiments';
 import {
@@ -16,6 +17,7 @@ import {
     listTasks,
     getTask,
     completeTask,
+    editTask,
     setTasksDir,
 } from '../lib/tasks';
 import {
@@ -201,6 +203,30 @@ program
         const payload: Record<string, unknown> = { id, status: 'done' };
         if (options.result !== undefined) payload.result = options.result;
         out(`Completed ${id}`, payload);
+    });
+
+program
+    .command('edit-exp')
+    .description('Edit experiment title or hypothesis')
+    .argument('<expId>')
+    .option('--title <text>', 'New title')
+    .option('--hypothesis <text>', 'New hypothesis')
+    .action(async (expId, options) => {
+        if (!options.title && !options.hypothesis) fail('Provide at least --title or --hypothesis');
+        await editExperiment(expId, { title: options.title, hypothesis: options.hypothesis });
+        out(`Updated ${expId}`, { expId, ...options });
+    });
+
+program
+    .command('edit-task')
+    .description('Edit task title or priority')
+    .argument('<taskId>')
+    .option('--title <text>', 'New title')
+    .option('--priority <level>', 'New priority (low | medium | high)')
+    .action(async (taskId, options) => {
+        if (!options.title && !options.priority) fail('Provide at least --title or --priority');
+        await editTask(taskId, { title: options.title, priority: options.priority });
+        out(`Updated ${taskId}`, { taskId, ...options });
     });
 
 program
